@@ -1,0 +1,9 @@
+.ansible/
+.vscode/
+roles/
+.DS_Store
+
+inventories/hosts.ini
+config.yml
+inventory
+ansible.cfg

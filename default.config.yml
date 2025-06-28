@@ -1,0 +1,8 @@
+---
+monitoring_root: /home/rafael/monitoring
+
+grafana_port: 3000
+prometheus_port: 9090
+
+monitoring_internal_subnet: 172.20.0.0/16
+docker_interface: docker0

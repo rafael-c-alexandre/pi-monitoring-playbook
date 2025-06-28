@@ -1,0 +1,60 @@
+---
+- name: Setup Pi monitoring.
+  hosts: all
+  become: true
+
+  vars_files:
+    - "{{ playbook_dir }}/default.config.yml"
+
+  pre_tasks:
+    - name: Include playbook configuration.
+      include_vars: "{{ item }}"
+      with_fileglob:
+        - "{{ playbook_dir }}/config.yml"
+
+  tasks:
+    - name: Clone monitoring repo.
+      git:
+        repo: 'https://github.com/rafael-c-alexandre/Docker-Raspberry-PI-Monitoring.git'
+        dest: "{{ monitoring_root }}"
+
+    - name: Check if docker compose is installed.
+      command: docker compose version
+      register: docker_compose_version
+      ignore_errors: true
+      changed_when: false
+
+    - name: Fail with message if docker compose is not installed.
+      fail:
+        msg: "Docker compose is required for this installation"
+      when: not (docker_compose_version.stdout | length > 0)
+
+    - name: Configure necessary UFW rules.
+      ufw:
+        rule: allow
+        port: "{{ item.port }}"
+        comment: "{{ item.comment }}"
+      with_items:
+        - port: "{{ grafana_port }}"
+          comment: allow-grafana
+        - port: "{{ prometheus_port }}"
+          comment: allow-prometheus
+      when:
+        - ansible_facts.services['ufw'] is defined
+        - ansible_facts.services['ufw'].state == 'running'
+
+    - name: Add iptables MASQUERADE rule for speedtest service.
+      shell: >
+        iptables -t nat -C POSTROUTING -s {{ monitoring_internal_subnet }} ! -o {{ docker_interface }} -j MASQUERADE ||
+        iptables -t nat -A POSTROUTING -s {{ monitoring_internal_subnet }} ! -o {{ docker_interface }} -j MASQUERADE
+      changed_when: false
+
+    - name: Stop any dangling docker compose services.
+      community.docker.docker_compose_v2:
+        project_src: "{{ monitoring_root }}"
+        state: stopped
+
+    - name: Start monitoring services.
+      community.docker.docker_compose_v2:
+        project_src: "{{ monitoring_root }}"
+        state: present

@@ -1,0 +1,61 @@
+---
+'on':
+  pull_request:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'README.md'
+  workflow_dispatch:
+
+jobs:
+
+  lint:
+    name: Lint
+    uses: rafael-c-alexandre/ansible-devops/.github/workflows/lint.yml@main
+    with:
+      lint_path: "."
+
+  playbook-test:
+    name: Run playbook test
+    runs-on: ubuntu-24.04-arm
+    needs: lint
+
+    steps:
+      - name: Check out the codebase.
+        uses: actions/checkout@v4
+
+      - name: Setup necessary ssh keys for testing.
+        run: |
+          mkdir ./keys
+          # SSH key necessary for initial SSH login.
+          ssh-keygen -t rsa -b 4096 -f ./keys/ci -N ""
+
+      - name: Set up Python 3.
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install test dependencies.
+        run: |
+          pip3 install ansible
+          sudo apt update
+
+      - name: Setup SSH server.
+        uses: rafael-c-alexandre/ansible-devops/.github/actions/start-ssh-server@main
+        with:
+          ssh_private_key_path: "keys/ci"
+          ssh_public_key_path: "keys/ci.pub"
+
+      - name: Download ansible roles.
+        run: |
+          ansible-galaxy install -r requirements.yml
+
+      - name: Run main.yml playbook test.
+        uses: rafael-c-alexandre/ansible-devops/.github/actions/playbook-test@main
+        with:
+          playbook_path: "./main.yml"
+          ansible_cfg_path: "./.github/configs/test_ansible.cfg"
+          inventory_path: "./inventories/hosts.local.ini"
+          config_path: "./default.config.yml"
+          run_idempotence_check: "false"
