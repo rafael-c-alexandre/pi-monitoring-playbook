@@ -9,7 +9,7 @@ This project installs my raspberry pi monitoring setup, available [here](https:/
 The recommend installation guide is as follows:
 
 1. Ensure the Raspberry Pi has Pi OS installed and SSH running and reachable.
-2. Get the PI IP address or hostname through `ip a` (or any other network-related tool) or in the router UI.
+2. Get the Pi IP address or hostname through `ip a` (or any other network-related tool) or in the router UI.
 3. Add the IP address/hostname in an inventory file such as `inventories/hosts.ini`.
 4. Clone or download this repository to your local drive.
 5. Run `ansible-galaxy install -r requirements.yml` inside this directory to install required Ansible roles and collections.
